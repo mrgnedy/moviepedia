@@ -1,0 +1,360 @@
+import 'package:flutter/material.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+
+class Swiper extends StatefulWidget {
+  @override
+  _SwiperState createState() => _SwiperState();
+}
+
+List child = List.generate(10, (index) {
+  return Container(
+    margin: EdgeInsets.all(5.0),
+    child: ClipRRect(
+      borderRadius: BorderRadius.all(Radius.circular(5.0)),
+      child: Stack(
+        children: <Widget>[
+          Image.network(i, fit: BoxFit.cover, width: 1000.0),
+          Positioned(
+            bottom: 0.0,
+            left: 0.0,
+            right: 0.0,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color.fromARGB(200, 0, 0, 0),
+                    Color.fromARGB(0, 0, 0, 0)
+                  ],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                ),
+              ),
+              padding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
+              child: Text(
+                'No. $index image',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20.0,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+});
+
+class _SwiperState extends State<Swiper> {
+  final CarouselSlider nonLoopingCarousel = CarouselSlider(
+    items: child,
+    enableInfiniteScroll: true,
+    autoPlay: true,
+    onPageChanged: (s) {
+      print('$s');
+    },
+    autoPlayCurve: Curves.bounceIn,
+    
+    enlargeCenterPage: true,
+    viewportFraction: 0.2,
+    aspectRatio: 6,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return nonLoopingCarousel;
+  }
+}
+
+
+
+
+
+
+
+import 'dart:async';
+import 'dart:math';
+import 'package:flutter/gestures.dart';
+import 'package:infinite_listview/infinite_listview.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart';
+import 'dart:convert';
+import 'dart:math';
+import 'package:youtube_player/youtube_player.dart';
+import 'package:youtube_player/controls.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+import 'package:session3/movie_mode.dart';
+
+void main() => runApp(MyApp());
+
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+List<Movie> _movies;
+Timer timer;
+
+class _MyAppState extends State<MyApp> {
+  int _selColor = Colors.amberAccent.value;
+  int _unSelColor = Colors.tealAccent.value;
+  int _selIndex = 0;
+  int _movIndex = 0;
+  bool _isLoading = false;
+  String _ytTrailer = '';
+  String _cardImage =
+      'https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png';
+  void callback(int index) {
+    _selIndex = index;
+    _cardImage = _movies[index].imgBG;
+    _ytTrailer = _movies[index].trailer;
+    _movIndex = index;
+    setState(() {});
+    print(_selIndex);
+  }
+
+  Future fetchData() {
+    return get('https://yts.lt/api/v2/list_movies.json?limit=6').then((res) {
+      Map decodedMap = json.decode(res.body);
+      _movies = List.generate(decodedMap['data']['movies'].length, (index) {
+        Map movie = decodedMap['data']['movies'][index];
+        print(movie);
+        return Movie(
+          img: movie['medium_cover_image'],
+          imgBG: movie['background_image_original'],
+          title: movie['title'],
+          imdb: movie['imdb_code'],
+          genres: movie['genres'],
+          rating: movie['rating'].toString(),
+          trailer: movie['yt_trailer_code'],
+          torrent: movie['torrents'],
+          mpa: movie['mpa_rating'],
+          desc: movie['description_full'],
+        );
+      });
+    }, onError: (e) {});
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    _isLoading = true;
+    fetchData().then((_) {
+      setState(() {
+        _cardImage = _movies[0].imgBG;
+
+        _isLoading = false;
+      });
+    });
+    super.initState();
+  }
+
+  void callback2() {
+    if (_selIndex == 6)
+      _selIndex = 0;
+    else
+      _selIndex++;
+    setState(() {});
+  }
+
+  // InfiniteScrollController ctrl = InfiniteScrollController(
+  //     // initialScrollOffset: -110,
+  //     keepScrollOffset: true);
+  // double height = 120;
+
+  @override
+  Widget build(BuildContext context) {
+    Timer.periodic(Duration(seconds: 5), (timer) => callback2);
+    // ctrl.addListener(()=>listener());
+    // ctrl.jumpTo(0);
+    return MaterialApp(
+      theme: ThemeData(
+        scaffoldBackgroundColor: Colors.blueGrey[300],
+        appBarTheme: AppBarTheme(
+          color: Color(0xff59b2b5),
+        ),
+      ),
+      home: Scaffold(
+        appBar: AppBar(),
+        body: Center(
+          child: _isLoading
+              ? CircularProgressIndicator()
+              : Builder(
+                  builder: (context) {
+                    return Container(
+                      height: MediaQuery.of(context).size.height/2.5,
+                      color: Colors.white,
+                      alignment: Alignment.bottomCenter,
+                      child: Stack(
+                        alignment: AlignmentGeometry.lerp(
+                            Alignment.bottomCenter, Alignment.bottomCenter, 1.2),
+                        fit: StackFit.loose,
+                        children: <Widget>[
+                          Container(
+                            height: MediaQuery.of(context).size.height / 3.1,
+                            // aspectRatio: 2 / 1.5,
+
+                            child: Row(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: <Widget>[
+                                AspectRatio(
+                                  aspectRatio:
+                                      MediaQuery.of(context).size.aspectRatio /
+                                          0.71,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.only(
+                                        bottomLeft: Radius.circular(15),
+                                        topLeft: Radius.circular(15)),
+                                    child: Image.network(
+                                      _movies[_movIndex].img,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Container(
+                                        padding: EdgeInsets.all(10),
+                                        width:
+                                            MediaQuery.of(context).size.height /
+                                                4.5,
+                                        child: Text(
+                                          _movies[_movIndex].title,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xff59b2b5),
+                                          ),
+                                        )),
+                                    Container(
+                                      width: MediaQuery.of(context).size.height /
+                                          4.5,
+                                      padding: EdgeInsets.all(10),
+                                      child: Text(
+                                        _movies[_movIndex].desc,
+                                        maxLines: 5,
+                                        overflow: TextOverflow.ellipsis,
+                                        // textWidthBasis: TextWidthBasis.parent,
+                                      ),
+                                    )
+                                  ],
+                                )
+                              ],
+                            ),
+                            margin: EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(15),
+                              boxShadow: [
+                                BoxShadow(
+                                  // spreadRadius: 10,
+                                  blurRadius: 10,
+                                  // offset: Offset.fromDirection(1, 10),
+                                  color: Colors.black38,
+                                )
+                              ],
+                            ),
+                          ),
+                          Container(
+                              margin: EdgeInsets.all(20),
+                              // height: height,
+                              child: Box(callback)),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class Box extends StatefulWidget {
+  final Function callback;
+  Box(this.callback);
+  @override
+  _BoxState createState() => _BoxState();
+}
+
+class _BoxState extends State<Box> {
+  int sel;
+  int color;
+
+  List<Widget> child;
+  Widget carousel() {
+    print(MediaQuery.of(context).size.aspectRatio);
+
+    return CarouselSlider(
+      items: child,
+      enableInfiniteScroll: true,
+      autoPlay: true,
+      pauseAutoPlayOnTouch: Duration(seconds: 3),
+      onPageChanged: (s) {
+        sel = s;
+        widget.callback(s);
+      },
+      height: MediaQuery.of(context).size.height / 8.22,
+      autoPlayCurve: Curves.elasticInOut,
+      enlargeCenterPage: true,
+      viewportFraction: 0.2,
+      // aspectRatio: 1,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    child = List.generate(
+      _movies.length,
+      (index) {
+        color = sel == index ? Colors.amber.value : Colors.cyan.value;
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color.fromARGB(200, 0, 0, 0),
+                Color.fromARGB(0, 0, 0, 0)
+              ],
+            ),
+            borderRadius: BorderRadius.circular(5),
+            border: Border.all(
+              color: Color(color),
+            ),
+          ),
+          margin: EdgeInsets.all(5.0),
+          child: ClipRRect(
+            borderRadius: BorderRadius.all(Radius.circular(5.0)),
+            child: Stack(
+              children: <Widget>[
+                Image.network(_movies[index].img,
+                    fit: BoxFit.cover, width: 1000.0),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(15),
+          gradient: LinearGradient(
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+            colors: [Color.fromARGB(200, 0, 0, 0), Color.fromARGB(0, 0, 0, 0)],
+          ),
+        ),
+        child: carousel());
+  }
+}
+// if (index >= 5) index = index - index ~/ 5 * 5;
+//                               if (index < 0) {
+//                                 index = -index;
+//                                 if (index >= 5) index = index - index ~/ 5 * 5;
+//                               }
